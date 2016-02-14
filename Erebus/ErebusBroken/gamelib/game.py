@@ -21,9 +21,11 @@ class Game(object):
         self.scp = [lambda x, a: random.randint(0, a),
                     lambda x, a: 0,
                     lambda x, a: consts.screen_size[x]]
-        self.cursor = self.Cursor()
+        # self.cursor = self.Cursor()
         pygame.mouse.set_visible(False)
         
+        self.clock = pygame.time.Clock()
+
         #### Background that probably won't get used ####
         self.bg = image.load_image('background2')
         self.bg = pygame.transform.scale(self.bg, consts.screen_size)
@@ -64,7 +66,7 @@ class Game(object):
         self.bgstars = pygame.sprite.Group()
 
         #### Creates Sprites! ####
-        [self.bgstars.add(bgStar(self.scroll)) for x in xrange(1000)]
+        [self.bgstars.add(bgStar()) for x in xrange(1000)]
         [self.particles.add(Particle('Hydrogen')) for x in xrange(1)]
 
         self.Player = Star()
@@ -77,6 +79,8 @@ class Game(object):
 
     def loop(self):
         #### Main game loop. Predefined Functions make it look pointless ####
+
+        #### Oh, god, this is not how you use a loop function........... ####
         self.mouse_attract = False
         while True:
             self.clock.tick(consts.FPS)
@@ -264,7 +268,7 @@ class Nemesis(pygame.sprite.Sprite):
 
 class bgStar(pygame.sprite.Sprite):
 
-    def __init__(self):
+    def __init__(self, fixing_argument = None):
         pygame.sprite.Sprite.__init__(self)
 
         self.image = image.load_image('particle')
