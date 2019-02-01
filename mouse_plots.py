@@ -7,6 +7,47 @@ GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 base_rect = pygame.Rect(0, 0, 1, 1)
 
+class Accumulator():
+    def __init__(self, size):
+        self._array = [0]*size
+        self._averages = [0]*size
+        self._index = 0
+        self._average = 0
+        self._num_values = 0
+        self._max_size = size
+
+    def accumulate(self, value):
+        if self._max_size == 0:
+            return
+        if self._num_values < self._max_size:
+            self._num_values += 1
+            
+        last_index = (self._index + 1) % self._max_size
+        last_value = self._array[last_index]
+        
+
+        if self._num_values != self._max_size:
+            self._average = self._average + (value - self._average) / float(self._num_values)
+            self._averages[self._index] = self._average
+        else:
+            self._average = self._average + (value - last_value) / float(self._num_values)
+            self._averages[self._index] = self._average
+
+        self._array[self._index] = value
+        self._index = last_index
+
+    @property
+    def average(self):
+        return self._average
+
+    @property
+    def values(self):
+        return self._array
+
+    @property
+    def averages(self):
+        return self._averages
+
 def draw_values(screen, color, values, base_rect, axis='x'):
     for i, v in enumerate(values):
         if axis == 'x':
@@ -28,9 +69,10 @@ def run():
     running = True
 
     mouse_points = []
-    x_points = []
-    y_points = []
-    max_points = 600
+    
+    max_points = 300
+    x_acc = Accumulator(max_points)
+    y_acc = Accumulator(max_points)
     samples = 0
     last_time = time.time()
     while running:
@@ -41,19 +83,11 @@ def run():
         
         (x, y) = pygame.mouse.get_pos()
         mouse_points.append((x, y))
-        last_x = x_points[-1] if x_points else 0
-        last_y = y_points[-1] if y_points else 0
-        x_points.append(x/(samples+1) + )
-        y_points.append(y)
-        if len(mouse_points) > max_points:
-            mouse_points.pop(0)
-        if len(x_points) > max_points:
-            x_points.pop(0)
-        if len(y_points) > max_points:
-            y_points.pop(0)
+        x_acc.accumulate(x)
+        y_acc.accumulate(y)
         screen.fill(BLACK)
-        draw_values(screen, BLUE, x_points, base_rect, axis='y')
-        draw_values(screen, GREEN, y_points, base_rect, axis='x')
+        draw_values(screen, BLUE, x_acc.values, base_rect, axis='y')
+        draw_values(screen, GREEN, y_acc.values, base_rect, axis='x')
         pygame.display.set_caption("%f" % (current_time - last_time))
         pygame.display.flip()
         last_time = current_time
