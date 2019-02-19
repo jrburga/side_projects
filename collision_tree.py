@@ -70,12 +70,12 @@ class RectTree(object):
 		self._cached_size = None
 		if self._children:
 			self._cached_position = (self.left, self.bottom)
-			self._cached_size = (self.width, self.height)
+			self._cached_size = (self.right - self.left, self.top - self.bottom)
 
 	def add(self, *rects):
 		for rect in rects:
 			self._add_rect(rect);
-		_recache_parameters()
+		self._recache_parameters()
 
 	def _add_rect(self, rect):
 		if hasattr(rect, 'parent'):
@@ -90,7 +90,7 @@ class RectTree(object):
 	def remove(self, *rects):
 		for rect in rects:
 			self._remove_rect(rect)
-		_recache_parameters()
+		self._recache_parameters()
 
 	def _remove_rect(self, rect):
 		try:
@@ -139,27 +139,31 @@ class RectTree(object):
 
 	@property
 	def size(self):
-		return (self.width, self.height)
+		return self._cached_size
 
 	@property
 	def position(self):
-		return (self.x, self.y)
+		return self._cached_position
 
 	@property
 	def x(self):
-		return self.left
+		if self._cached_position:
+			return self._cached_position[0]
 
 	@property
 	def y(self):
-		return self.bottom
+		if self._cached_position:
+			return self._cached_position[1]
 
 	@property
 	def width(self):
-		return self.right - self.left
+		if self._cached_size:
+			return self._cached_size[0]
 
 	@property
 	def height(self):
-		return self.top - self.bottom
+		if self._cached_size:
+			return self._cached_size[1]
 
 	@property
 	def w(self):
@@ -169,13 +173,22 @@ class RectTree(object):
 	def h(self):
 		return self.height
 
+	def __repr__(self):
+		if self.position and self.size:
+			return "<RectTree %r>" % (self._children)
+		return "<RectTree []>"
+
 if __name__ == '__main__':
 	cr = Rect((0, 0), (10, 10))
 
 	print min([cr], key=lambda x: x.x)
 
 	rt = RectTree()
+	rt2 = RectTree()
 	rt.add(cr)
-	rt.remove(cr)
+	rt2.add(cr)
+	print rt
+	rt.add(rt2)
+	print rt
 
 
