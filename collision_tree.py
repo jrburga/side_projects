@@ -25,18 +25,157 @@ class Rect(object):
 		return self._size[0]
 
 	@property
-	def w(self):
-		return self._size[0]
-
-	@property
 	def height(self):
 		return self._size[1]
 
 	@property
+	def w(self):
+		return self.width
+
+	@property
 	def h(self):
-		return self._size[1]
+		return self.height
+
+	@property
+	def left(self):
+		return self.x
+
+	@property
+	def top(self):
+		return self.y + self.height
+
+	@property
+	def right(self):
+		return self.x + self.width
+
+	@property
+	def bottom(self):
+		return self.y
+
+	def __repr__(self):
+		return '<Rect %r %r>' % (self._position, self._size)
+
+class RectTree(object):
+
+	def __init__(self):
+		self._children = []
+		self._parent = None
+
+		self._cached_position = None
+		self._cached_size = None
+		self._is_dirty = None
+
+	def _recache_parameters(self):
+		self._cached_position = None
+		self._cached_size = None
+		if self._children:
+			self._cached_position = (self.left, self.bottom)
+			self._cached_size = (self.width, self.height)
+
+	def add(self, *rects):
+		for rect in rects:
+			self._add_rect(rect);
+		_recache_parameters()
+
+	def _add_rect(self, rect):
+		if hasattr(rect, 'parent'):
+			if rect._parent == self:
+				return
+			if rect._parent:
+				rect._parent.remove(rect)
+			rect._parent = self
+
+		self._children.append(rect)
+
+	def remove(self, *rects):
+		for rect in rects:
+			self._remove_rect(rect)
+		_recache_parameters()
+
+	def _remove_rect(self, rect):
+		try:
+			self._children.remove(rect)
+		except ValueError:
+			raise ValueError("rect %r not in tree" % rect)
+
+		if hasattr(rect, 'parent'):
+			rect._parent = None
+
+	@property
+	def parent(self):
+		return self._parent
+
+	@property
+	def children(self):
+		return self._children
+
+	@property
+	def left(self):
+		if self._cached_position and self._cached_size:
+			return self._cached_position[0]
+		if self._children:
+			return min(self._children, key=lambda rect: rect.left).left
+
+	@property
+	def right(self):
+		if self._cached_position and self._cached_size:
+			return self._cached_position[0] + self._cached_size[0]
+		if self._children:
+			return max(self._children, key=lambda rect: rect.right).right
+
+	@property
+	def top(self):
+		if self._cached_position and self._cached_size:
+			return self._cached_position[1] + self._cached_size[1]
+		if self._children:
+			return max(self._children, key=lambda rect: rect.top).top
+
+	@property
+	def bottom(self):
+		if self._cached_position and self._cached_size:
+			return self._cached_position[1]
+		if self._children:
+			return min(self._children, key=lambda rect: rect.bottom).bottom
+
+	@property
+	def size(self):
+		return (self.width, self.height)
+
+	@property
+	def position(self):
+		return (self.x, self.y)
+
+	@property
+	def x(self):
+		return self.left
+
+	@property
+	def y(self):
+		return self.bottom
+
+	@property
+	def width(self):
+		return self.right - self.left
+
+	@property
+	def height(self):
+		return self.top - self.bottom
+
+	@property
+	def w(self):
+		return self.width
+
+	@property
+	def h(self):
+		return self.height
 
 if __name__ == '__main__':
-	cr = Rect()
+	cr = Rect((0, 0), (10, 10))
 
-	print cr
+	print min([cr], key=lambda x: x.x)
+
+	rt = RectTree()
+	rt.add(cr)
+	rt.remove(cr)
+
+
