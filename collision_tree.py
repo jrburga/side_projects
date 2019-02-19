@@ -69,8 +69,13 @@ class RectTree(object):
 		self._cached_position = None
 		self._cached_size = None
 		if self._children:
-			self._cached_position = (self.left, self.bottom)
-			self._cached_size = (self.right - self.left, self.top - self.bottom)
+			x = self.left
+			y = self.bottom
+			w = self.right - x
+			h = self.top - y
+			if x != None and y != None and w != None and h != None:
+				self._cached_position = (x, y)
+				self._cached_size = (w, h)
 
 	def add(self, *rects):
 		for rect in rects:
@@ -175,8 +180,8 @@ class RectTree(object):
 
 	def __repr__(self):
 		if self.position and self.size:
-			return "<RectTree %r>" % (self._children)
-		return "<RectTree []>"
+			return "<RectTree %r %r : %r>" % (self.position, self.size, self._children)
+		return "<RectTree %r>" % (self._children)
 
 if __name__ == '__main__':
 	cr = Rect((0, 0), (10, 10))
@@ -187,7 +192,6 @@ if __name__ == '__main__':
 	rt2 = RectTree()
 	rt.add(cr)
 	rt2.add(cr)
-	print rt
 	rt.add(rt2)
 	print rt
 
