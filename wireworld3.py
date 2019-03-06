@@ -154,7 +154,7 @@ class WireWorld3(object):
 							head1_count += 1
 						elif cell_type == CellType.HEAD_2:
 							head2_count += 1
-				if head1_count > 0 and head2_count < head1_count:
+				if head1_count > 0 and head2_count <= head1_count:
 					self.next_map[x, y] = CellType.HEAD_1
 					continue
 				elif head2_count > 0 and head1_count < head2_count:
@@ -190,14 +190,34 @@ class WireWorld3(object):
 				string += '.'
 		return string
 
-if __name__ == '__main__':
+
+def StringToMap(string):
+	string = string.strip()
 	map2d = Map2D()
-	map2d[49, 50] = CellType.HEAD_2
-	map2d[50, 50] = CellType.CONDUCTOR
-	map2d[51, 50] = CellType.CONDUCTOR
-	map2d[52, 50] = CellType.CONDUCTOR
-	map2d[53, 50] = CellType.HEAD_1
-	map2d[52, 51] = CellType.CONDUCTOR
+	x, y = 0, 0
+	for c in string:
+		if c == '\n':
+			y += 1
+			x = 0
+			continue
+		elif c == '.':
+			map2d[x, y] = CellType.TAIL
+		elif c == '+':
+			map2d[x, y] = CellType.HEAD_1
+		elif c == '-':
+			map2d[x, y] = CellType.HEAD_2
+		elif c == '0':
+			map2d[x, y] = CellType.CONDUCTOR
+		print c, x, y, map2d[x, y]
+		x += 1
+	return map2d
+
+if __name__ == '__main__':
+	mapString = """
+00000+
+000-
+"""
+	map2d = StringToMap(mapString)
 
 	ww = WireWorld3(map2d)
 	print ww
