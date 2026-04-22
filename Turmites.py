@@ -52,7 +52,7 @@ class Turmite():
                      [[int(x) for x in list(c[6:8])], [int(x) for x in list(c[8:10])]],
                      [int(x) for x in list(c[10:12])]]
     def Color(self):
-        self.color = [eval('0b' +self.chrom[x:x+8]) for x in xrange(0, 5, 2)]
+        self.color = [int(self.chrom[x:x+8], 2) for x in range(0, 5, 2)]
     def Kill(self, grid):
         c = grid[0]
         x, y = self.pos
@@ -64,7 +64,7 @@ def Mate(turmite1, turmite2):
     s = rnd(0, 1)
     chroms = turmite1.chrom, turmite2.chrom
     new_turmite = Turmite()
-    new_turmite.chrom = chroms[s][0:split]+chroms[not[s]][split:12]
+    new_turmite.chrom = chroms[s][0:split]+chroms[not s][split:12]
     new_turmite.Read()
     new_turmite.Color()
     new_turmite.parents = (turmite1, turmite2)
@@ -102,10 +102,10 @@ def Step(grid):     # Updates Screen, Values, and Grid, according to Conway's Ga
 
 grid = [0,
         [[[choice([0]*20+[1]), 0]
-          for x in xrange(100)]
-         for y in xrange(100)]]
+          for x in range(100)]
+         for y in range(100)]]
 
-turmites = [Turmite() for x in xrange(50)]
+turmites = [Turmite() for x in range(50)]
 
 Font = pygame.font.SysFont('None', 20)
 
@@ -151,5 +151,5 @@ while run:
 
 pygame.display.quit()
 for step in dead:
-    print dead[step].chrom, step
+    print(dead[step].chrom, step)
         
