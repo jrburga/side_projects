@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Turmites × Game of Life</title>
+<style>
+  body {
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    gap: 10px;
+    font-family: monospace;
+    color: #ccc;
+  }
+  h2 { margin: 0; }
+  canvas {
+    width: 600px;
+    height: 600px;
+    image-rendering: pixelated;
+    border: 1px solid #444;
+  }
+  #info { font-size: 13px; letter-spacing: 1px; }
+  button {
+    font-family: monospace;
+    font-size: 12px;
+    background: #333;
+    color: #ccc;
+    border: 1px solid #555;
+    padding: 4px 12px;
+    cursor: pointer;
+  }
+  button:hover { background: #444; }
+</style>
+</head>
+<body>
+<h2>Turmites × Game of Life</h2>
+<canvas id="c" width="300" height="300"></canvas>
+<div id="info">Gen 0 | Step 0 | Alive: 50</div>
+<button id="btn">Restart</button>
+<script>
+const W = 100, H = 100;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const infoEl = document.getElementById('info');
+
+const rnd = (lo, hi) => Math.floor(Math.random() * (hi - lo + 1)) + lo;
+const DIRS = [[1,0],[0,1],[-1,0],[0,-1]];
+
+function makeGrid() {
+  return {
+    buf: 0,
+    cells: Array.from({length: H}, () =>
+      Array.from({length: W}, () => [Math.random() < 1/21 ? 1 : 0, 0])
+    )
+  };
+}
+
+function makeTurmite(chrom) {
+  if (!chrom) chrom = rnd(0, (1 << 12) - 1).toString(2).padStart(12, '0');
+  const t = {
+    alive: true,
+    energy: 50,
+    dir: rnd(0, 3),
+    pos: [rnd(0, W-1), rnd(0, H-1)],
+    state: rnd(0, 1),
+    chrom,
+    read: null,
+    color: null,
+    parents: null,
+  };
+  decodeChrom(t);
+  return t;
+}
+
+function decodeChrom(t) {
+  const c = t.chrom;
+  t.read = [
+    [+c[0], +c[1]],
+    [[+c[2], +c[3]], [+c[4], +c[5]]],
+    [[+c[6], +c[7]], [+c[8], +c[9]]],
+    [+c[10], +c[11]]
+  ];
+  // Overlapping 8-bit windows into the 12-bit chromosome, matching Python: range(0,5,2)
+  t.color = [0, 2, 4].map(i => parseInt(c.slice(i, i + 8), 2));
+}
+
+function stepTurmite(t, grid) {
+  t.energy--;
+  const a = grid.buf;
+  const r = t.read;
+  const s = t.state;
+  let [x, y] = t.pos;
+
+  const c = grid.cells[y][x][a];
+  const sMatch = +(s === r[0][0]);
+  const cMatch = +(c === r[0][1]);
+
+  // State update uses [sMatch][cMatch]; cell write uses swapped conditions
+  t.state = r[1][sMatch][cMatch];
+  grid.cells[y][x][a] = r[2][+(c === r[0][0])][+(s === r[0][1])];
+  const nc = grid.cells[y][x][a];
+
+  if (c)  { if (!nc) t.energy--; }
+  else    { if (nc)  t.energy++; }
+
+  if (s === r[0][0]) t.dir = (t.dir + r[3][cMatch] + 4) % 4;
+  else               t.dir = (t.dir - r[3][cMatch] + 4) % 4;
+
+  t.pos = [
+    (x + DIRS[t.dir][0] + W) % W,
+    (y + DIRS[t.dir][1] + H) % H,
+  ];
+}
+
+function killTurmite(t, grid) {
+  const [x, y] = t.pos;
+  grid.cells[y][x][grid.buf] = 1;
+  t.alive = false;
+}
+
+function golStep(grid) {
+  const c = grid.buf, nc = 1 - c;
+  const cells = grid.cells;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let n = 0;
+      cells[y][x][nc] = cells[y][x][c];
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          if (cells[(y+dy+H)%H][(x+dx+W)%W][c]) n++;
+        }
+      }
+      if (cells[y][x][c]) { if (n < 2 || n > 3) cells[y][x][nc] = 0; }
+      else                { if (n === 3)          cells[y][x][nc] = 1; }
+    }
+  }
+  grid.buf = nc;
+}
+
+function mate(t1, t2) {
+  const split = rnd(1, 11);
+  const s = rnd(0, 1);
+  const chroms = [t1.chrom, t2.chrom];
+  const chrom = chroms[s].slice(0, split) + chroms[1-s].slice(split);
+  const child = makeTurmite(chrom);
+  child.parents = [t1, t2];
+  return child;
+}
+
+function render(grid, turmites) {
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, 300, 300);
+
+  const a = grid.buf;
+  ctx.fillStyle = '#000';
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      if (grid.cells[y][x][a]) ctx.fillRect(x*3, y*3, 2, 2);
+    }
+  }
+
+  for (const t of turmites) {
+    if (!t.alive) continue;
+    const [x, y] = t.pos;
+    ctx.fillStyle = `rgb(${t.color[0]},${t.color[1]},${t.color[2]})`;
+    ctx.fillRect(x*3, y*3, 2, 2);
+  }
+}
+
+let grid, turmites, steps, generation, dead;
+
+function init() {
+  grid = makeGrid();
+  turmites = Array.from({length: 50}, () => makeTurmite());
+  steps = 0;
+  generation = 0;
+  dead = new Map(); // step → turmite
+}
+
+function tick() {
+  steps++;
+  golStep(grid);
+
+  for (const t of turmites) {
+    if (!t.alive) continue;
+    stepTurmite(t, grid);
+    if (t.energy < 1) {
+      killTurmite(t, grid);
+      dead.set(steps, t);
+    }
+  }
+
+  const alive = turmites.filter(t => t.alive);
+  if (alive.length === 0) {
+    generation++;
+    turmites = [];
+    const keys = [...dead.keys()].sort((a, b) => b - a);
+    while (keys.length > 1) {
+      const k1 = keys.shift(), k2 = keys.shift();
+      const p1 = dead.get(k1), p2 = dead.get(k2);
+      turmites.push(mate(p1, p2), mate(p1, p2));
+    }
+    dead.clear();
+    if (turmites.length === 0) {
+      turmites = Array.from({length: 50}, () => makeTurmite());
+    }
+  }
+
+  render(grid, turmites);
+  const aliveCount = turmites.filter(t => t.alive).length;
+  infoEl.textContent = `Gen ${generation} | Step ${steps} | Alive: ${aliveCount}`;
+}
+
+document.getElementById('btn').addEventListener('click', () => { init(); });
+
+init();
+setInterval(tick, 1000 / 15);
+</script>
+</body>
+</html>
